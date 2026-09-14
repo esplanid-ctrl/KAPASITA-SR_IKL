@@ -1,0 +1,8 @@
+indicator_id,domain,source_key,file_pattern,field_pattern,level,year,direction,transform,component
+INC_SCHOOL_COVERAGE,INC,DATA_DRIVE,inklusif,coverage,region,2025,good,percentile_invert,INC
+INC_INFRA_COVERAGE,INC,DATA_DRIVE,sarpras_inklusif,coverage,region,2025,good,percentile_invert,INC
+CAP_TEACHER_EQUITY,CAP,DATA_DRIVE,pemerataan_guru,index,region,2025,bad,percentile,CAP
+CAP_GTK,CAP,DATA_DRIVE,GTK,context,region,2025,bad,capacity_gap,CAP
+SOC_P0,SOC,DATA_DRIVE,kemiskinan,p0,kab_kota,2025,bad,percentile,SOC
+DIG_INTERNET,DIG,DATA_DRIVE,internet_pengajaran,coverage,region,2025,good,percentile_invert,DIG
+POL_SIGNAL,POL,POLICY_DRIVE,policy_rules,signal,national,2025,bad,evidence_coded,POL

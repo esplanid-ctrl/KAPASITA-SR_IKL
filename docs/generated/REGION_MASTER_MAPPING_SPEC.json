@@ -1,0 +1,92 @@
+{
+  "spec_version": "1.0",
+  "generated_from": "cahyadsn/wilayah ZIP provided by project owner, inspected directly (no prior-knowledge schema assumed)",
+  "source_declared_regulation": {
+    "note": "Two different Kepmendagri numbers appear in the repo itself; reported verbatim, not resolved by this tool.",
+    "in_wilayah_sql_header": "Kepmendagri No 300.2.2-2138 Tahun 2025",
+    "in_composer_json": "Kepmendagri No 300.2.2-2430 Tahun 2025"
+  },
+  "tables": {
+    "wilayah": {
+      "file": "db/wilayah.sql",
+      "columns": {"kode": "varchar(13), PRIMARY KEY", "nama": "varchar(100)"},
+      "row_count": 91599,
+      "role": "canonical hierarchical code + name, all 4 levels"
+    },
+    "wilayah_level_1_2": {
+      "file": "db/wilayah_level_1_2.sql",
+      "columns": {
+        "kode": "varchar(13), PRIMARY KEY",
+        "nama": "varchar(100)",
+        "ibukota": "varchar(100)",
+        "lat": "double (centroid latitude, degrees)",
+        "lng": "double (centroid longitude, degrees)",
+        "elv": "float (elevation, meters)",
+        "tz": "tinyint (timezone offset, hours)",
+        "luas": "double (area, km2)",
+        "penduduk": "double (population)",
+        "path": "longtext -- boundary geometry, see geometry block below",
+        "status": "tinyint -- meaning NOT documented anywhere in repo; observed constant value 1 across all 552 rows in this snapshot"
+      },
+      "row_count": 552,
+      "role": "province (38) + kabupaten/kota (514) ONLY -- includes geometry"
+    },
+    "wilayah_penduduk": {
+      "file": "db/wilayah_penduduk.sql",
+      "columns": {"kode": "varchar(13)", "nama": "varchar(100)", "pria": "integer", "wanita": "integer", "total": "integer"},
+      "known_quirk": "includes an extra row kode='0', nama='INDONESIA' (national aggregate) not present in wilayah_level_1_2 -- must be excluded from any province/kab-kota join"
+    },
+    "wilayah_luas": {
+      "file": "db/wilayah_luas.sql",
+      "columns": {"kode": "varchar(13)", "nama": "varchar(100)", "luas": "double"}
+    },
+    "wilayah_pulau": {
+      "file": "db/wilayah_pulau.sql",
+      "columns": {"kode": "varchar(11)", "nama": "varchar(255)", "lat": "float", "lng": "float", "status": "varchar(3)", "luas": "float", "notes": "text"},
+      "role": "islands, NOT an administrative-region table -- not used for region_id"
+    }
+  },
+  "code_schema": {
+    "separator": ".",
+    "segment_widths": [2, 2, 2, 4],
+    "level_by_segment_count": {
+      "1": "province",
+      "2": "kabupaten_kota",
+      "3": "kecamatan",
+      "4": "desa_kelurahan"
+    },
+    "canonical_analytical_unit": "kabupaten_kota (2 segments, e.g. '11.01')",
+    "province_parent_derivation": "first segment of the kabupaten_kota code, e.g. '11.01' -> province '11'",
+    "row_counts_by_level": {"province": 38, "kabupaten_kota": 514, "kecamatan": 7285, "desa_kelurahan": 83762}
+  },
+  "geometry": {
+    "available_for_levels": ["province", "kabupaten_kota"],
+    "not_available_for_levels": ["kecamatan", "desa_kelurahan"],
+    "source_field": "wilayah_level_1_2.path",
+    "declared_type": "longtext (free-form JSON array, NOT a GeoJSON object, NOT a native GIS geometry column)",
+    "coordinate_order": "[lat, lng] -- verified against this table's own separate lat/lng centroid columns for the same row; NOT the GeoJSON-standard [lng, lat]",
+    "crs": {
+      "declared_in_source": false,
+      "assumption": "WGS84 / EPSG:4326, inferred from decimal-degree coordinate ranges matching Indonesia's real geographic extent -- NOT an explicit statement in the repository"
+    },
+    "nesting_structure": "INCONSISTENT across rows -- three distinct shapes observed in the same 552-row table",
+    "nesting_variants": {
+      "depth_2": {"meaning": "single simple ring (Polygon, no holes)", "observed_rows": 246},
+      "depth_3": {"meaning": "flat list of independent rings (multi-part/island polygons concatenated, no explicit polygon grouping or hole distinction)", "observed_rows": 295},
+      "depth_4": {"meaning": "full MultiPolygon-of-rings (polygon groups each with own ring list)", "observed_rows": 3, "examples": ["92", "96", "96.01"]}
+    },
+    "implication": "A geometry loader MUST sniff nesting depth per row (cannot assume a fixed GeoJSON type) and normalize to a single consistent internal representation before use in any mapping library."
+  },
+  "known_data_quirks": [
+    "wilayah_penduduk has a national-aggregate row kode='0' not present in wilayah_level_1_2 -- exclude from region joins.",
+    "wilayah_level_1_2.status is constant (1) across the full snapshot; its meaning is undocumented in the repo.",
+    "Two different Kepmendagri decree numbers are cited in different files for the same dataset version.",
+    "Dump uses CRLF line endings; wilayah.sql's CREATE TABLE does not declare a charset while wilayah_level_1_2.sql declares utf8 -- minor encoding inconsistency to be aware of during parsing."
+  ],
+  "kapasita_mapping": {
+    "region_id": "kabupaten_kota kode, WITH the dot separator preserved as canonical form (e.g. '11.01'), since that is the literal primary key in the source",
+    "province_id": "first dot-segment of region_id",
+    "region_name": "wilayah_level_1_2.nama (or wilayah.nama for the same kode) -- display/audit only, never used for joining",
+    "geometry_field": "wilayah_level_1_2.path, normalized to a nested MultiPolygon-of-rings structure with coordinates reordered to [lng, lat] before use in any GeoJSON-consuming tool"
+  }
+}
