@@ -312,16 +312,20 @@ with tabs[5]:
     q = st.text_input("Pertanyaan")
     if q:
         with st.spinner("Meminta jawaban dari Copilot..."):
-            answer = ask(q, scored_df, rec_df, signal_df, region_col=REGION_COL)
+            region_master_ids = set(region_master["region_id"]) if region_master is not None else None
+            answer = ask(q, scored_df, rec_df, signal_df, region_col=REGION_COL, region_master_ids=region_master_ids)
         if "PERINGATAN GROUNDING" in answer:
-            st.error("Model menyebut ID yang tidak ada di evidence -- lihat peringatan di bawah.")
+            st.error("Model menyebut ID yang tidak terdaftar di sistem mana pun -- lihat peringatan di bawah.")
+        elif "CATATAN GROUNDING" in answer:
+            st.warning("Model menyebut ID yang valid tapi di luar evidence untuk pertanyaan ini -- lihat catatan di bawah.")
         st.write(answer)
     st.caption(
         "Copilot hanya boleh menjawab dari evidence Gate 1 + Policy Engine di atas (rule_status "
         "disebutkan apa adanya: kandidat/verified/pending_policy_verification/unlinked_policy/dst). "
-        "Setiap respons diperiksa otomatis untuk rule_id/source_id/kode wilayah yang tidak ada di "
-        "evidence -- jika ditemukan, itu ditandai eksplisit sebagai kemungkinan halusinasi, bukan "
-        "disembunyikan."
+        "Pertanyaan yang meminta agregasi/perbandingan/tren lintas-wilayah akan ditolak dengan pesan "
+        "eksplisit, bukan dijawab dengan angka hasil hitungan model. Setiap respons diperiksa "
+        "otomatis untuk rule_id/source_id/kode wilayah yang tidak terdaftar -- ini pemeriksaan "
+        "KEBERADAAN ID saja, BUKAN pemeriksaan kebenaran isi jawaban."
     )
 
 # --- 7. Data quality / confidence --------------------------------------------
